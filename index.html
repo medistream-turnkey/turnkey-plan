@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>내 한의원 매출구조 설계하기</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #1B2A4A;
+            --primary-light: #2D5A8E;
+            --accent: #3B82F6;
+            --accent-light: #DBEAFE;
+            --success: #10B981;
+            --success-light: #D1FAE5;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --bg: #F0F4F8;
+            --card: #FFFFFF;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --border: #E2E8F0;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .step {
+            display: none;
+            min-height: 100vh;
+            padding: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+        .step.active { display: flex; flex-direction: column; align-items: center; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* ===== Landing ===== */
+        #landing {
+            background: linear-gradient(165deg, #0F172A 0%, #1E3A5F 50%, #1B2A4A 100%);
+            color: white;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 24px;
+        }
+        #landing .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+        #landing h1 {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+        #landing .subtitle {
+            font-size: 15px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+        .qr-section {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+        .qr-placeholder {
+            width: 180px;
+            height: 180px;
+            background: white;
+            border-radius: 12px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .qr-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .qr-section p {
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+        }
+        .qr-section .qr-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 24px 0;
+            cursor: pointer;
+        }
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .checkbox-wrapper label {
+            font-size: 15px;
+            color: rgba(255,255,255,0.9);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* ===== Buttons ===== */
+        .btn-primary {
+            width: 100%;
+            padding: 16px 24px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-primary:hover { background: #2563EB; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,130,246,0.4); }
+        .btn-primary:disabled { background: #475569; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 14px 24px;
+            background: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-secondary:hover { background: var(--accent-light); }
+
+        .btn-group { display: flex; gap: 12px; margin-top: 24px; }
+        .btn-group .btn-back {
+            flex: 0 0 auto;
+            padding: 14px 20px;
+            background: var(--bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-group .btn-primary { flex: 1; }
+
+        /* ===== Progress Bar ===== */
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 32px;
+            padding: 0 4px;
+        }
+        .progress-step {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        .progress-step.active { background: var(--accent); color: white; }
+        .progress-step.done { background: var(--success); color: white; }
+        .progress-line {
+            flex: 1;
+            height: 3px;
+            background: var(--border);
+            transition: background 0.3s;
+        }
+        .progress-line.done { background: var(--success); }
+
+        /* ===== Cards ===== */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
+        }
+        .card-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .card h2 {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 6px;
+        }
+        .card .desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        /* ===== Input ===== */
+        .input-group {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-wrapper input {
+            width: 100%;
+            padding: 14px 60px 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 20px;
+            font-weight: 700;
+            font-family: inherit;
+            color: var(--text);
+            transition: border-color 0.2s;
+            -moz-appearance: textfield;
+        }
+        .input-wrapper input::-webkit-outer-spin-button,
+        .input-wrapper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+        .input-wrapper input:focus { outline: none; border-color: var(--accent); }
+        .input-wrapper .unit {
+            position: absolute;
+            right: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* ===== Split Display ===== */
+        .split-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .split-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            border: 2px solid var(--border);
+        }
+        .split-card .label {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .split-card .value {
+            font-size: 20px;
+            font-weight: 800;
+        }
+        .split-card .sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+        .split-card.insurance { border-color: #3B82F6; background: #EFF6FF; }
+        .split-card.insurance .value { color: #2563EB; }
+        .split-card.non-insurance { border-color: #8B5CF6; background: #F5F3FF; }
+        .split-card.non-insurance .value { color: #7C3AED; }
+        .split-card.auto-insurance { border-color: #6B7280; background: #F9FAFB; }
+        .split-card.auto-insurance .value { color: #374151; }
+
+        /* ===== Working Days Selector ===== */
+        .days-selector {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .days-option {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            font-family: inherit;
+        }
+        .days-option.active {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+        .days-option .num { font-size: 18px; font-weight: 800; }
+        .days-option .label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .days-option.active .label { color: var(--accent); }
+
+        /* ===== Detail Table ===== */
+        .detail-table {
+            width: 100%;
+            margin-top: 16px;
+        }
+        .detail-row {
+            display: grid;
+            grid-template-columns: 70px 1fr 80px 90px;
+            gap: 8px;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .detail-row.header {
+            border-bottom: 2px solid var(--text);
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+        }
+        .detail-row.header span {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .detail-row .item-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .detail-row .item-price {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .detail-row .item-price input {
+            width: 100%;
+            padding: 8px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            font-family: inherit;
+            -moz-appearance: textfield;
+        }
+        .detail-row .item-price input::-webkit-outer-spin-button,
+        .detail-row .item-price input::-webkit-inner-spin-button { -webkit-appearance: none; }
+        .detail-row .item-price input:focus { outline: none; border-color: var(--accent); }
+        .detail-row .item-count input {
+            width: 100%;
+            padding: 8px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            font-family: inherit;
+            background: #F8FAFC;
+            -moz-appearance: textfield;
+        }
+        .detail-row .item-count input::-webkit-outer-spin-button,
+        .detail-row .item-count input::-webkit-inner-spin-button { -webkit-appearance: none; }
+        .detail-row .item-count input:focus { outline: none; border-color: var(--accent); background: white; }
+        .detail-row .item-total {
+            font-size: 14px;
+            font-weight: 700;
+            text-align: right;
+            color: var(--primary);
+        }
+
+        /* ===== Target vs Actual ===== */
+        .target-comparison {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            margin-top: 16px;
+            font-weight: 700;
+        }
+        .target-comparison.over {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        .target-comparison.under {
+            background: var(--warning-light);
+            color: #B45309;
+        }
+        .target-comparison.match {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        .target-comparison .tc-label { font-size: 13px; }
+        .target-comparison .tc-value { font-size: 18px; }
+
+        /* ===== Result Page ===== */
+        .result-hero {
+            text-align: center;
+            padding: 32px 24px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: var(--radius);
+            color: white;
+            margin-bottom: 16px;
+        }
+        .result-hero .label { font-size: 14px; opacity: 0.8; margin-bottom: 4px; }
+        .result-hero .amount { font-size: 36px; font-weight: 900; }
+        .result-hero .amount .unit { font-size: 18px; font-weight: 600; }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .result-item {
+            background: var(--card);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .result-item .ri-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .result-item .ri-value {
+            font-size: 22px;
+            font-weight: 800;
+        }
+        .result-item .ri-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .action-items {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
+        }
+        .action-items h3 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .action-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            align-items: flex-start;
+        }
+        .action-item:last-child { border-bottom: none; }
+        .action-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+            margin-top: 6px;
+        }
+        .action-text {
+            font-size: 14px;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+        .action-text strong { font-weight: 700; color: var(--primary); }
+
+        /* ===== CTA Section ===== */
+        .cta-section {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+            border: 2px solid #F59E0B;
+            border-radius: var(--radius);
+            padding: 28px 24px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .cta-section .cta-emoji { font-size: 40px; margin-bottom: 12px; }
+        .cta-section h3 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #92400E;
+            margin-bottom: 8px;
+        }
+        .cta-section p {
+            font-size: 14px;
+            color: #A16207;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .cta-section .btn-cta {
+            display: inline-block;
+            padding: 14px 32px;
+            background: #F59E0B;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .cta-section .btn-cta:hover { background: #D97706; transform: translateY(-1px); }
+
+        /* ===== Summary Table ===== */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .summary-table th, .summary-table td {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+        .summary-table th {
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .summary-table td:last-child {
+            text-align: right;
+            font-weight: 700;
+        }
+        .summary-table tr.total {
+            border-top: 2px solid var(--text);
+        }
+        .summary-table tr.total td {
+            font-weight: 800;
+            font-size: 15px;
+            color: var(--primary);
+        }
+        .summary-table .cat-header td {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 13px;
+            padding-top: 16px;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        /* ===== Misc ===== */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 20px 0;
+        }
+        .info-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--accent-light);
+            color: var(--accent);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .text-center { text-align: center; }
+        .mt-8 { margin-top: 8px; }
+        .mt-16 { margin-top: 16px; }
+        .mt-24 { margin-top: 24px; }
+        .mb-16 { margin-bottom: 16px; }
+
+        /* ===== Date/Time Input ===== */
+        .datetime-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .datetime-row input[type="date"],
+        .datetime-row input[type="time"] {
+            flex: 1;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--text);
+            transition: border-color 0.2s;
+            background: white;
+        }
+        .datetime-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .btn-now {
+            padding: 12px 16px;
+            background: var(--accent-light);
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .btn-now:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* ===== Share Section ===== */
+        .share-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .btn-share {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .btn-share:hover {
+            background: var(--primary-light);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(27,42,74,0.3);
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--primary);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: var(--shadow-lg);
+            z-index: 9999;
+            transition: transform 0.3s ease;
+            font-family: inherit;
+            pointer-events: none;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ===== Result Date ===== */
+        .result-date {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        /* ===== Shared Mode Banner ===== */
+        .shared-banner {
+            background: var(--accent-light);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 400px) {
+            .detail-row {
+                grid-template-columns: 60px 1fr 65px 75px;
+                gap: 6px;
+            }
+            .detail-row .item-name { font-size: 13px; }
+            .result-hero .amount { font-size: 28px; }
+        }
+
+        /* ===== Auto Insurance Input ===== */
+        .auto-ins-input {
+            margin-top: 12px;
+        }
+        .auto-ins-input .input-wrapper input {
+            font-size: 16px;
+            padding: 12px 60px 12px 16px;
+        }
+
+        /* ===== Editable Split ===== */
+        .split-card .edit-value {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .split-card .edit-value input {
+            width: 100px;
+            padding: 8px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 800;
+            text-align: right;
+            font-family: inherit;
+            -moz-appearance: textfield;
+        }
+        .split-card .edit-value input::-webkit-outer-spin-button,
+        .split-card .edit-value input::-webkit-inner-spin-button { -webkit-appearance: none; }
+        .split-card .edit-value input:focus { outline: none; border-color: var(--accent); }
+        .split-card .edit-value .unit {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .split-card .pct {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========== 사이트 ON/OFF ========== -->
+<div id="siteClosed" class="step" style="display:none;">
+    <div class="container" style="text-align:center; padding-top:30vh;">
+        <div style="font-size:48px; margin-bottom:20px;">🔒</div>
+        <h2 style="font-size:24px; font-weight:800; margin-bottom:12px;">현재 이용할 수 없습니다</h2>
+        <p style="color:var(--text-secondary); font-size:15px; line-height:1.6;">
+            개원 상담 시간에 다시 접속해주세요.
+        </p>
+    </div>
+</div>
+
+<!-- ========== LANDING ========== -->
+<div id="landing" class="step active">
+    <div class="container">
+        <div class="badge">개원 컨설팅</div>
+        <h1>내 한의원<br>턴키 패키지 설계하기</h1>
+        <p class="subtitle">개원 규모와 예산을 입력하면<br>필요 물품과 예상 견적을 자동으로 설계합니다.</p>
+
+        <button class="btn-primary" id="startBtn" onclick="goToStep('step1')">
+            예상 견적 짜보기
+        </button>
+    </div>
+</div>
+
+<!-- ========== STEP 1: 개원 규모 ========== -->
+<div id="step1" class="step">
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress-step active">1</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">2</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">3</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">4</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">STEP 1</div>
+            <h2>개원하시는<br>한의원 규모를 알려주세요</h2>
+            <p class="desc">규모 정보는 개원실장이 주문서를 만들 때 참고합니다.</p>
+
+            <div class="input-group">
+                <label>원장님 성함 / 병원명</label>
+                <div class="input-wrapper">
+                    <input type="text" id="contactInfo" placeholder="예: 홍길동 / 메디한의원" oninput="state.contact=this.value">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>1인실 베드 수</label>
+                <div class="input-wrapper">
+                    <input type="number" id="bed1" value="2" min="0" oninput="calcScale()">
+                    <span class="unit">개</span>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>2인실 베드 수 (룸 단위)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="bed2" value="3" min="0" oninput="calcScale()">
+                    <span class="unit">개</span>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>예상 직원 수 (실장·간호 포함)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="staff" value="4" min="0" oninput="calcScale()">
+                    <span class="unit">명</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">계산된 규모</div>
+            <p class="desc">턴키 주문서 수량 공식 기준 <span class="info-badge">총베드수 = 1인실 + 2인실×2</span></p>
+            <div class="split-cards">
+                <div class="split-card insurance">
+                    <div><div class="label">총 베드 수</div><div class="pct">베드비례 품목 기준</div></div>
+                    <div class="value" id="totalBeds">0</div>
+                </div>
+                <div class="split-card non-insurance">
+                    <div><div class="label">총 룸 수</div><div class="pct">룸비례 품목 기준</div></div>
+                    <div class="value" id="totalRooms">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-back" onclick="goToStep('landing')">이전</button>
+            <button class="btn-primary" id="step1Next" onclick="goToStep('step2')">다음: 카테고리 선택</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== STEP 2: 패키지 등급 ========== -->
+<div id="step2" class="step">
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress-step done">1</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step active">2</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">3</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">4</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">5</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">STEP 2</div>
+            <h2>어떤 카테고리를<br>준비하시나요?</h2>
+            <p class="desc">필요한 카테고리를 모두 선택하세요. <span class="info-badge" id="grpCountBadge">0개 선택</span></p>
+            <div id="groupSelect" class="split-cards"></div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-back" onclick="goToStep('step1')">이전</button>
+            <button class="btn-primary" id="step2Next" onclick="goToStep('step3')" disabled>다음: 금액 입력</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== STEP 3: 카테고리별 금액 ========== -->
+<div id="step3" class="step">
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress-step done">1</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step done">2</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step active">3</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">4</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">5</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">STEP 3</div>
+            <h2>카테고리별<br>예상 금액을 알려주세요</h2>
+            <p class="desc">참고용 정보입니다. 정확한 견적은 개원실장이 주문서로 안내드립니다.</p>
+            <div id="amountInputs"></div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-back" onclick="goToStep('step2')">이전</button>
+            <button class="btn-primary" onclick="goToStep('step4')">다음: 구카테고리 확인</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== STEP 4: 구카테고리 확인 ========== -->
+<div id="step4" class="step">
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress-step done">1</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step done">2</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step done">3</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step active">4</div>
+            <div class="progress-line"></div>
+            <div class="progress-step">5</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">STEP 4</div>
+            <h2>세부 카테고리를<br>확인해주세요</h2>
+            <p class="desc">선택하신 카테고리에 해당하는 상품 분류입니다. 불필요한 항목은 해제하세요. <span class="info-badge" id="subCatBadge">0개 선택</span></p>
+            <div id="subCatSelect"></div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-back" onclick="goToStep('step3')">이전</button>
+            <button class="btn-primary" id="step4Next" onclick="showResults()">요약 보기</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== STEP 5: 참고용 요약 ========== -->
+<div id="step5" class="step">
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress-step done">1</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step done">2</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step done">3</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step done">4</div>
+            <div class="progress-line done"></div>
+            <div class="progress-step active">5</div>
+        </div>
+
+        <div class="result-hero">
+            <div class="label">개원 준비 설문 요약</div>
+            <div class="amount" style="font-size:24px;">개원실장 전달용</div>
+        </div>
+
+        <div class="result-grid">
+            <div class="result-item">
+                <div class="ri-label">총 베드 / 룸</div>
+                <div class="ri-value" id="resultScale">0 / 0</div>
+                <div class="ri-sub" id="resultBedDetail">1인실 0 · 2인실 0</div>
+            </div>
+            <div class="result-item">
+                <div class="ri-label">예상 직원 수</div>
+                <div class="ri-value" id="resultStaff">0명</div>
+                <div class="ri-sub">실장·간호 포함</div>
+            </div>
+            <div class="result-item">
+                <div class="ri-label">선택 카테고리</div>
+                <div class="ri-value" id="resultGrpCount">0개</div>
+                <div class="ri-sub">상위 분류</div>
+            </div>
+            <div class="result-item">
+                <div class="ri-label">세부 카테고리</div>
+                <div class="ri-value" id="resultCatCount">0개</div>
+                <div class="ri-sub">주문서 준비 대상</div>
+            </div>
+        </div>
+
+        <div class="action-items">
+            <h3>📋 카테고리별 예상 금액</h3>
+            <table class="summary-table"><tbody id="summaryBody"></tbody></table>
+        </div>
+
+        <div class="action-items">
+            <h3>🗂️ 확정 세부 카테고리</h3>
+            <div id="selectedCatList"></div>
+        </div>
+
+        <div class="cta-section">
+            <div class="cta-emoji">🏥</div>
+            <h3>설문 요약 완료</h3>
+            <p>이 요약을 바탕으로 개원실장이<br>실제 주문서를 준비합니다.</p>
+            <div id="contactEcho" style="font-size:14px; font-weight:700; color:#92400E;"></div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-back" onclick="goToStep('step4')">이전</button>
+            <button class="btn-primary" onclick="goHome()">처음으로</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== 사이트 ON/OFF 스위치 =====
+const SITE_ACTIVE = true;
+(function() {
+    if (!SITE_ACTIVE) {
+        document.getElementById('landing').classList.remove('active');
+        document.getElementById('siteClosed').style.display = 'flex';
+        document.getElementById('siteClosed').classList.add('active');
+    }
+})();
+
+// ===== Slack 중계 (Google Apps Script Web App → #개원-컨설팅_운영) =====
+// ⚠️ relay.gs 배포 후 생성된 웹 앱 URL(.../exec)을 아래 따옴표 안에 붙여넣으세요.
+const RELAY_URL = "PASTE_APPS_SCRIPT_EXEC_URL_HERE";
+
+// ===== 소모품/비품 패키지 프리셋 (만원) =====
+const PACKAGES = { basic: 200, standard: 500, premium: 800 };
+const PKG_LABEL = { basic: '베이직', standard: '스탠다드', premium: '프리미엄' };
+
+// ===== 구카테고리 상품수 (products.json 활성 기준, 2026-05-14 스냅샷) =====
+const CAT_COUNT = {
+    "도서":4758,"생활":3572,"가전/가구":3437,"소모품":2983,"치료실 물품":2541,
+    "의류/잡화":2501,"의료기기":1707,"식품":911,"한약재":902,"온라인 강의":383,
+    "약속처방(산청1)":378,"탕전실 용품":274,"의약품":264,"디자인":245,"오프라인 강의":195,
+    "약속처방(산청2)":192,"기타":160,"홍보물(B2D)":156,"기획서비스":126,"해부학 모형":84,
+    "MSP":67,"일반물품":41,"약속처방(약침)":29,"가구":19,"재활 용품":16,
+    "캐시몰 충전상품":14,"구독":8,"의약외품":3
+};
+
+// ===== 상위 카테고리 → 구카테고리 매핑 (사용자 지정, 2026-05-18) =====
+const GROUPS = [
+    { key:'consumable', label:'소모품 / 비품', hasPackage:true,
+      cats:["생활","소모품","치료실 물품","의약품","해부학 모형","일반물품","재활 용품","의약외품"] },
+    { key:'appliance',  label:'가전 / 가구',   hasPackage:false, cats:["가전/가구","가구"] },
+    { key:'clothing',   label:'의류',          hasPackage:false, cats:["의류/잡화"] },
+    { key:'onyang',     label:'원탕',          hasPackage:false,
+      cats:["한약재","약속처방(산청1)","탕전실 용품","약속처방(산청2)","약속처방(약침)"] },
+    { key:'book',       label:'도서',          hasPackage:false, cats:["도서"] },
+    { key:'counsel',    label:'상담자료',      hasPackage:false, cats:["디자인","홍보물(B2D)"] }
+];
+const GROUP_BY_KEY = Object.fromEntries(GROUPS.map(g => [g.key, g]));
+
+// ===== State =====
+const state = {
+    bed1: 2, bed2: 3, staff: 4,
+    totalBeds: 0, totalRooms: 0,
+    selectedGroups: [],          // step2: group key 배열
+    amounts: {},                 // step3: { groupKey: {mode:'package'|'custom', pkg, value} }
+    deselectedCats: [],          // step4: 사용자가 끈 구카테고리명
+    contact: ''                  // step5: 성함/병원명
+};
+
+// ===== Navigation =====
+function goToStep(stepId) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(stepId).classList.add('active');
+    window.scrollTo(0, 0);
+    if (stepId === 'step2') renderGroupSelect();
+    if (stepId === 'step3') renderAmountInputs();
+    if (stepId === 'step4') renderSubCats();
+}
+function goHome() { goToStep('landing'); }
+
+// ===== Landing ===== (QR/체크박스 제거 — 버튼 바로 진입)
+
+// ===== Step 1: 규모 =====
+function calcScale() {
+    state.bed1 = parseInt(document.getElementById('bed1').value) || 0;
+    state.bed2 = parseInt(document.getElementById('bed2').value) || 0;
+    state.staff = parseInt(document.getElementById('staff').value) || 0;
+    // 턴키 공식: 총베드수 = 1인실 + 2인실×2, 총룸수 = 1인실 + 2인실
+    state.totalBeds = state.bed1 + state.bed2 * 2;
+    state.totalRooms = state.bed1 + state.bed2;
+    document.getElementById('totalBeds').textContent = state.totalBeds + '베드';
+    document.getElementById('totalRooms').textContent = state.totalRooms + '룸';
+}
+
+// ===== Step 2: 상위 카테고리 선택 =====
+function renderGroupSelect() {
+    const wrap = document.getElementById('groupSelect');
+    wrap.innerHTML = GROUPS.map(g => {
+        const on = state.selectedGroups.includes(g.key);
+        return `<div class="split-card ${on ? 'insurance' : ''}" style="cursor:pointer; ${on ? '' : 'opacity:0.55;'}" onclick="toggleGroup('${g.key}')">
+            <div><div class="label">${g.label}</div></div>
+            <div class="value">${on ? '✓ 선택' : '선택'}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('grpCountBadge').textContent = state.selectedGroups.length + '개 선택';
+    document.getElementById('step2Next').disabled = state.selectedGroups.length === 0;
+}
+function toggleGroup(key) {
+    const i = state.selectedGroups.indexOf(key);
+    if (i >= 0) state.selectedGroups.splice(i, 1);
+    else { state.selectedGroups.push(key); if (!state.amounts[key]) state.amounts[key] = GROUP_BY_KEY[key].hasPackage ? {mode:'package', pkg:'basic'} : {mode:'custom', value:null}; }
+    renderGroupSelect();
+}
+
+// ===== Step 3: 카테고리별 금액 =====
+function renderAmountInputs() {
+    const wrap = document.getElementById('amountInputs');
+    const groups = GROUPS.filter(g => state.selectedGroups.includes(g.key));
+    wrap.innerHTML = groups.map(g => {
+        const a = state.amounts[g.key] || {};
+        let inner = `<div style="font-size:14px;font-weight:800;color:var(--accent);margin:18px 0 8px;">${g.label}</div>`;
+        if (g.hasPackage) {
+            inner += `<div class="days-selector" style="flex-direction:column; gap:8px;">` +
+                ['basic','standard','premium'].map(p => {
+                    const act = a.mode === 'package' && a.pkg === p ? ' active' : '';
+                    return `<button class="days-option${act}" onclick="setGroupPackage('${g.key}','${p}',this)">
+                        <div class="num">${PKG_LABEL[p]} · 약 ${PACKAGES[p]}만원</div></button>`;
+                }).join('') + `</div>`;
+        }
+        const cv = (a.mode === 'custom' && a.value) ? a.value : '';
+        inner += `<div class="input-group" style="margin-top:10px;">
+            <label>${g.hasPackage ? '직접 금액 입력 (선택)' : '예상 금액'}</label>
+            <div class="input-wrapper">
+                <input type="number" id="amt_${g.key}" placeholder="예: 300" value="${cv}" oninput="setGroupAmount('${g.key}', this.value)">
+                <span class="unit">만원</span>
+            </div>
+        </div>`;
+        return `<div style="border-bottom:1px dashed var(--border); padding-bottom:8px;">${inner}</div>`;
+    }).join('');
+}
+function setGroupPackage(key, pkg, el) {
+    state.amounts[key] = { mode:'package', pkg };
+    const grp = el.closest('.days-selector');
+    grp.querySelectorAll('.days-option').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    const inp = document.getElementById('amt_' + key); if (inp) inp.value = '';
+}
+function setGroupAmount(key, val) {
+    const v = parseFloat(val);
+    if (v > 0) {
+        state.amounts[key] = { mode:'custom', value: v };
+        const sel = document.querySelector('#amt_' + key);
+        const ds = sel && sel.closest('.input-group').previousElementSibling;
+        if (ds && ds.classList.contains('days-selector')) ds.querySelectorAll('.days-option').forEach(b => b.classList.remove('active'));
+    } else {
+        const g = GROUP_BY_KEY[key];
+        state.amounts[key] = g.hasPackage ? { mode:'package', pkg: (state.amounts[key] && state.amounts[key].pkg) || 'basic' } : { mode:'custom', value:null };
+    }
+}
+function amountText(key) {
+    const a = state.amounts[key];
+    if (!a) return '미입력';
+    if (a.mode === 'package') return `${PKG_LABEL[a.pkg]} (약 ${numberFormat(PACKAGES[a.pkg])}만원)`;
+    if (a.mode === 'custom' && a.value) return `${numberFormat(a.value)}만원`;
+    return '미입력';
+}
+
+// ===== Step 4: 세부(구) 카테고리 확인 =====
+function candidateCats() {
+    const seen = new Set(); const list = [];
+    state.selectedGroups.forEach(k => GROUP_BY_KEY[k].cats.forEach(c => { if (!seen.has(c)) { seen.add(c); list.push(c); } }));
+    return list;
+}
+function activeCats() {
+    return candidateCats().filter(c => !state.deselectedCats.includes(c));
+}
+function renderSubCats() {
+    const wrap = document.getElementById('subCatSelect');
+    let html = '';
+    GROUPS.filter(g => state.selectedGroups.includes(g.key)).forEach(g => {
+        html += `<div style="font-size:14px;font-weight:800;color:var(--accent);margin:16px 0 8px;">${g.label}</div>`;
+        html += `<div class="split-cards">` + g.cats.map(c => {
+            const on = !state.deselectedCats.includes(c);
+            return `<div class="split-card ${on ? 'insurance' : ''}" style="cursor:pointer; ${on ? '' : 'opacity:0.5;'}" onclick="toggleSubCat('${c.replace(/'/g,"\\'")}')">
+                <div><div class="label">${c}</div></div>
+                <div class="value">${on ? '✓ 포함' : '제외'}</div>
+            </div>`;
+        }).join('') + `</div>`;
+    });
+    wrap.innerHTML = html;
+    updateSubCatBadge();
+}
+function toggleSubCat(name) {
+    const i = state.deselectedCats.indexOf(name);
+    if (i >= 0) state.deselectedCats.splice(i, 1);
+    else state.deselectedCats.push(name);
+    renderSubCats();
+}
+function updateSubCatBadge() {
+    document.getElementById('subCatBadge').textContent = activeCats().length + '개 선택';
+    document.getElementById('step4Next').disabled = activeCats().length === 0;
+}
+
+// ===== Step 5: 참고용 요약 =====
+function showResults() {
+    const cats = activeCats();
+    if (cats.length === 0) return;
+    document.getElementById('resultScale').textContent = state.totalBeds + ' / ' + state.totalRooms;
+    document.getElementById('resultBedDetail').textContent = `1인실 ${state.bed1} · 2인실 ${state.bed2}`;
+    document.getElementById('resultStaff').textContent = state.staff + '명';
+    document.getElementById('resultGrpCount').textContent = state.selectedGroups.length + '개';
+    document.getElementById('resultCatCount').textContent = cats.length + '개';
+    document.getElementById('contactEcho').textContent = state.contact ? ('👤 ' + state.contact) : '※ 성함/병원명 미입력 (STEP 1에서 입력 가능)';
+
+    let rows = '';
+    GROUPS.filter(g => state.selectedGroups.includes(g.key)).forEach(g => {
+        rows += `<tr><td><strong>${g.label}</strong></td><td style="text-align:right">${amountText(g.key)}</td></tr>`;
+    });
+    document.getElementById('summaryBody').innerHTML = rows;
+
+    document.getElementById('selectedCatList').innerHTML = GROUPS
+        .filter(g => state.selectedGroups.includes(g.key))
+        .map(g => {
+            const items = g.cats.filter(c => !state.deselectedCats.includes(c));
+            if (items.length === 0) return '';
+            return `<div class="action-item"><div class="action-dot"></div><div class="action-text"><strong>${g.label}</strong> <span style="color:var(--text-secondary);font-weight:400;">${items.join(' · ')}</span></div></div>`;
+        }).join('');
+
+    goToStep('step5');
+}
+
+// ===== Slack 전송 =====
+function buildSlackMessage() {
+    const L = [];
+    L.push('🏥 *턴키 개원 설문 접수*');
+    if (state.contact) L.push('👤 *' + state.contact + '*');
+    L.push(`• 규모: 1인실 ${state.bed1} · 2인실 ${state.bed2}  →  총 ${state.totalBeds}베드 / ${state.totalRooms}룸`);
+    L.push(`• 직원: ${state.staff}명`);
+    L.push('• 카테고리별 예상금액:');
+    GROUPS.filter(g => state.selectedGroups.includes(g.key)).forEach(g => {
+        L.push(`    - ${g.label}: ${amountText(g.key)}`);
+    });
+    L.push('• 확정 세부 카테고리:');
+    GROUPS.filter(g => state.selectedGroups.includes(g.key)).forEach(g => {
+        const items = g.cats.filter(c => !state.deselectedCats.includes(c));
+        if (items.length) L.push(`    - ${g.label}: ${items.join(' · ')}`);
+    });
+    const now = new Date();
+    L.push(`_접수: ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}_`);
+    return L.join('\n');
+}
+async function postRelay(payload) {
+    // 단순 요청(Content-Type 기본 text/plain) → CORS preflight 없음. 응답 JSON 판독 가능.
+    const res = await fetch(RELAY_URL, { method: 'POST', body: JSON.stringify(payload) });
+    return await res.json(); // { ok, error, backup }
+}
+async function submitToSlack() {
+    const cats = activeCats();
+    const status = document.getElementById('sendStatus');
+    const btn = document.getElementById('sendBtn');
+    if (cats.length === 0) { status.style.color = '#B45309'; status.textContent = '⚠️ 선택된 카테고리가 없습니다.'; return; }
+    if (!RELAY_URL || RELAY_URL.indexOf('script.google.com') < 0) {
+        status.style.color = '#B45309';
+        status.textContent = '⚠️ 전송 설정이 아직 완료되지 않았습니다. (중계 URL 미설정)';
+        return;
+    }
+    btn.disabled = true;
+    status.style.color = '#A16207';
+    status.textContent = '전송 중…';
+    const payload = { text: buildSlackMessage(), contact: state.contact || '' };
+
+    let lastErr = '';
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        status.textContent = attempt === 1 ? '전송 중…' : `전송 재시도 중… (${attempt}/3)`;
+        try {
+            const r = await postRelay(payload);
+            if (r && r.ok) {
+                status.style.color = 'var(--success)';
+                status.textContent = '✅ 개원실장에게 전달되었습니다.';
+                btn.textContent = '전달 완료';
+                return;
+            }
+            lastErr = (r && r.error) ? r.error : '서버 응답 오류';
+        } catch (e) {
+            lastErr = String(e);
+        }
+        if (attempt < 3) await new Promise(res => setTimeout(res, 1200));
+    }
+    // 3회 모두 실패 — 유실 방지: 재시도 버튼 유지 + 명확 안내
+    btn.disabled = false;
+    btn.textContent = '다시 전달하기';
+    status.style.color = 'var(--danger)';
+    status.innerHTML = '❌ 전송에 실패했습니다. 인터넷 확인 후 <b>다시 전달하기</b>를 눌러주세요.';
+    console.warn('[turnkey relay] 전송 실패:', lastErr);
+}
+
+// ===== Utility =====
+function numberFormat(num) {
+    return Math.round(num).toLocaleString('ko-KR');
+}
+
+// ===== Init =====
+calcScale();
+</script>
+
+</body>
+</html>
