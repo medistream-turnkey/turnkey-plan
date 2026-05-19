@@ -976,13 +976,13 @@
         <div class="card">
             <div class="card-header">STEP 3</div>
             <h2>카테고리별<br>예상 금액을 알려주세요</h2>
-            <p class="desc">참고용 정보입니다. 정확한 견적은 개원실장이 주문서로 안내드립니다.</p>
+            <p class="desc">참고용 정보입니다. 정확한 견적은 개원매니저가 주문서로 안내드립니다.<br>금액을 선택하지 않으시면 <strong>추천 상품으로 구성해 전달</strong>드립니다.</p>
             <div id="amountInputs"></div>
         </div>
 
         <div class="btn-group">
             <button class="btn-back" onclick="goToStep('step2')">이전</button>
-            <button class="btn-primary" onclick="goToStep('step4')">다음: 구카테고리 확인</button>
+            <button class="btn-primary" onclick="goToStep('step4')">다음: 세부 카테고리 확인</button>
         </div>
     </div>
 </div>
@@ -1142,7 +1142,7 @@ const SITE_ACTIVE = true;
 const RELAY_URL = "https://script.google.com/macros/s/AKfycby2KjmJryqrTHtKdj5YHB9E4JKhAqk1WtDSvlnuCFhUO6ejU5pQtqhwCwwrvelGWowg/exec";
 
 // ===== 소모품/비품 패키지 프리셋 (만원) =====
-const PACKAGES = { basic: 200, standard: 500, premium: 800 };
+const PACKAGES = { basic: 200, standard: 400, premium: 600 };
 const PKG_LABEL = { basic: '베이직', standard: '스탠다드', premium: '프리미엄' };
 
 // ===== 구카테고리 상품수 (products.json 활성 기준, 2026-05-14 스냅샷) =====
@@ -1157,16 +1157,35 @@ const CAT_COUNT = {
 
 // ===== 상위 카테고리 → 구카테고리 매핑 (사용자 지정, 2026-05-18) =====
 const GROUPS = [
-    { key:'consumable', label:'소모품 / 비품', hasPackage:true,
-      cats:["생활","소모품","치료실 물품","의약품","해부학 모형","일반물품","재활 용품","의약외품"] },
-    { key:'appliance',  label:'가전 / 가구',   hasPackage:false, cats:["가전/가구","가구"] },
-    { key:'clothing',   label:'의류',          hasPackage:false, cats:["의류/잡화"] },
-    { key:'onyang',     label:'원탕',          hasPackage:false,
-      cats:["한약재","약속처방(산청1)","탕전실 용품","약속처방(산청2)","약속처방(약침)"] },
-    { key:'book',       label:'도서',          hasPackage:false, cats:["도서"] },
-    { key:'counsel',    label:'상담자료',      hasPackage:false, cats:["디자인","홍보물(B2D)"] }
+    { key:'consumable', label:'소모품 / 비품', hasPackage:true, subs:[
+        { label:'소모품 (침·주사기·부항 등)', cats:["소모품"] },
+        { label:'치료실 물품',               cats:["치료실 물품"] },
+        { label:'생활·일반 용품',            cats:["생활","일반물품"] },
+        { label:'의약품·의약외품',           cats:["의약품","의약외품"] },
+        { label:'재활 용품',                 cats:["재활 용품"] },
+        { label:'해부학 모형',               cats:["해부학 모형"] },
+    ] },
+    { key:'appliance',  label:'가전 / 가구',   hasPackage:false, subs:[
+        { label:'가전·가구',                 cats:["가전/가구","가구"] },
+    ] },
+    { key:'clothing',   label:'의류',          hasPackage:false, subs:[
+        { label:'의료 의류·잡화 (가운·스크럽 등)', cats:["의류/잡화"] },
+    ] },
+    { key:'onyang',     label:'원탕',          hasPackage:false, subs:[
+        { label:'한약재',                    cats:["한약재"] },
+        { label:'탕전실 용품',               cats:["탕전실 용품"] },
+        { label:'약속처방 (한약 과립·약침)', cats:["약속처방(산청1)","약속처방(산청2)","약속처방(약침)"] },
+    ] },
+    { key:'book',       label:'도서',          hasPackage:false, subs:[
+        { label:'도서',                      cats:["도서"] },
+    ] },
+    { key:'counsel',    label:'상담자료',      hasPackage:false, subs:[
+        { label:'디자인 제작물',             cats:["디자인"] },
+        { label:'홍보물 (리플렛·포스터 등)', cats:["홍보물(B2D)"] },
+    ] }
 ];
 const GROUP_BY_KEY = Object.fromEntries(GROUPS.map(g => [g.key, g]));
+function groupCats(g) { return g.subs.flatMap(s => s.cats); }  // 그룹의 실제 구카테고리 평탄화
 
 // ===== State =====
 const state = {
@@ -1321,30 +1340,36 @@ function setGroupAmount(key, val) {
 }
 function amountText(key) {
     const a = state.amounts[key];
-    if (!a) return '미입력';
+    if (!a) return '추천 상품으로 전달';
     if (a.mode === 'package') return `${PKG_LABEL[a.pkg]} (약 ${numberFormat(PACKAGES[a.pkg])}만원)`;
     if (a.mode === 'custom' && a.value) return `${numberFormat(a.value)}만원`;
-    return '미입력';
+    return '추천 상품으로 전달';
 }
 
 // ===== Step 4: 세부(구) 카테고리 확인 =====
 function candidateCats() {
     const seen = new Set(); const list = [];
-    state.selectedGroups.forEach(k => GROUP_BY_KEY[k].cats.forEach(c => { if (!seen.has(c)) { seen.add(c); list.push(c); } }));
+    state.selectedGroups.forEach(k => groupCats(GROUP_BY_KEY[k]).forEach(c => { if (!seen.has(c)) { seen.add(c); list.push(c); } }));
     return list;
 }
 function activeCats() {
     return candidateCats().filter(c => state.selectedCats.includes(c));
+}
+function subOn(sub) { return sub.cats.every(c => state.selectedCats.includes(c)); }
+function selectedSubCount() {
+    let n = 0;
+    GROUPS.filter(g => state.selectedGroups.includes(g.key)).forEach(g => g.subs.forEach(s => { if (subOn(s)) n++; }));
+    return n;
 }
 function renderSubCats() {
     const wrap = document.getElementById('subCatSelect');
     let html = '';
     GROUPS.filter(g => state.selectedGroups.includes(g.key)).forEach(g => {
         html += `<div style="font-size:14px;font-weight:800;color:var(--accent);margin:16px 0 8px;">${g.label}</div>`;
-        html += `<div class="split-cards">` + g.cats.map(c => {
-            const on = state.selectedCats.includes(c);
-            return `<div class="split-card ${on ? 'insurance' : ''}" style="cursor:pointer; ${on ? '' : 'opacity:0.5;'}" onclick="toggleSubCat('${c.replace(/'/g,"\\'")}')">
-                <div><div class="label">${c}</div></div>
+        html += `<div class="split-cards">` + g.subs.map((s, idx) => {
+            const on = subOn(s);
+            return `<div class="split-card ${on ? 'insurance' : ''}" style="cursor:pointer; ${on ? '' : 'opacity:0.5;'}" onclick="toggleSub('${g.key}',${idx})">
+                <div><div class="label">${s.label}</div></div>
                 <div class="value">${on ? '✓ 포함' : '선택'}</div>
             </div>`;
         }).join('') + `</div>`;
@@ -1352,14 +1377,17 @@ function renderSubCats() {
     wrap.innerHTML = html;
     updateSubCatBadge();
 }
-function toggleSubCat(name) {
-    const i = state.selectedCats.indexOf(name);
-    if (i >= 0) state.selectedCats.splice(i, 1);
-    else state.selectedCats.push(name);
+function toggleSub(groupKey, idx) {
+    const sub = GROUP_BY_KEY[groupKey].subs[idx];
+    if (subOn(sub)) {
+        state.selectedCats = state.selectedCats.filter(c => !sub.cats.includes(c));
+    } else {
+        sub.cats.forEach(c => { if (!state.selectedCats.includes(c)) state.selectedCats.push(c); });
+    }
     renderSubCats();
 }
 function updateSubCatBadge() {
-    document.getElementById('subCatBadge').textContent = activeCats().length + '개 선택';
+    document.getElementById('subCatBadge').textContent = selectedSubCount() + '개 선택';
     document.getElementById('step4Next').disabled = activeCats().length === 0;
 }
 
@@ -1389,7 +1417,7 @@ function showResults() {
     document.getElementById('selectedCatList').innerHTML = GROUPS
         .filter(g => state.selectedGroups.includes(g.key))
         .map(g => {
-            const items = g.cats.filter(c => state.selectedCats.includes(c));
+            const items = groupCats(g).filter(c => state.selectedCats.includes(c));
             if (items.length === 0) return '';
             return `<div class="action-item"><div class="action-dot"></div><div class="action-text"><strong>${g.label}</strong> <span style="color:var(--text-secondary);font-weight:400;">${items.join(' · ')}</span></div></div>`;
         }).join('');
@@ -1410,7 +1438,7 @@ function buildSlackMessage() {
     });
     L.push('• 확정 세부 카테고리:');
     GROUPS.filter(g => state.selectedGroups.includes(g.key)).forEach(g => {
-        const items = g.cats.filter(c => state.selectedCats.includes(c));
+        const items = groupCats(g).filter(c => state.selectedCats.includes(c));
         if (items.length) L.push(`    - ${g.label}: ${items.join(' · ')}`);
     });
     const now = new Date();
@@ -1424,7 +1452,7 @@ function buildDetail() {
         staff: state.staff ? (state.staff + '명') : '미입력',
         amounts: sel.map(g => `${g.label}: ${amountText(g.key)}`).join(' / '),
         cats: sel.map(g => {
-            const items = g.cats.filter(c => state.selectedCats.includes(c));
+            const items = groupCats(g).filter(c => state.selectedCats.includes(c));
             return items.length ? `${g.label}(${items.join('·')})` : '';
         }).filter(Boolean).join(' / ')
     };
