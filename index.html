@@ -813,6 +813,9 @@
         <button class="btn-primary" id="startBtn" onclick="startFresh()">
             예상 견적 짜보기
         </button>
+        <div style="margin-top:14px;">
+            <a onclick="openInfo('landing')" style="display:inline-block; color:rgba(255,255,255,0.85); font-size:14px; font-weight:600; text-decoration:underline; cursor:pointer;">💡 구매 혜택 · 배송 안내 · 추천상품 보기</a>
+        </div>
     </div>
 </div>
 
@@ -1035,9 +1038,50 @@
             <div id="sendStatus" style="margin-top:14px; font-size:14px; font-weight:700;"></div>
         </div>
 
+        <button class="btn-secondary" onclick="openInfo('step5')" style="margin-bottom:16px;">💡 구매 혜택 · 배송 안내 · 추천상품 PDF</button>
+
         <div class="btn-group">
             <button class="btn-back" onclick="goToStep('step4')">이전</button>
             <button class="btn-primary" onclick="goHome()">처음으로</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== 안내 페이지 (구매 혜택 · 배송 · 추천상품 PDF) ========== -->
+<div id="info" class="step">
+    <div class="container">
+        <div class="result-hero">
+            <div class="label">개원 안내</div>
+            <div class="amount" style="font-size:24px;">구매 혜택 · 배송 안내</div>
+        </div>
+
+        <div class="action-items">
+            <h3>💰 구매 금액별 혜택</h3>
+            <table class="summary-table"><tbody>
+                <tr><td>600만원 이상 구매 시</td><td style="text-align:right"><strong>6% 할인</strong></td></tr>
+                <tr><td>500만원 이상 구매 시</td><td style="text-align:right"><strong>5% 할인</strong></td></tr>
+                <tr><td>400만원 이상 구매 시</td><td style="text-align:right"><strong>4% 할인</strong></td></tr>
+                <tr><td>300만원 이상 구매 시</td><td style="text-align:right"><strong>3% 할인</strong></td></tr>
+            </tbody></table>
+        </div>
+
+        <div class="action-items">
+            <h3>🚚 배송 일정 안내</h3>
+            <div class="action-item"><div class="action-dot"></div><div class="action-text">상품을 <strong>5일 이내</strong> 수령 원하시는 경우 직접 주문 진행해주시면 됩니다.</div></div>
+            <div class="action-item"><div class="action-dot"></div><div class="action-text">그보다 여유 있는 일정으로 수령 원하시는 경우, 저희 쪽으로 요청 주시면 원하시는 일정에 맞춰 주문서 전달 및 구매 진행을 도와드립니다.</div></div>
+            <div class="action-item"><div class="action-dot"></div><div class="action-text">최대한 원하시는 일정에 맞춰 진행해 드리나, 물류 상황에 따라 일정이 일부 변동·지연될 수 있는 점 양해 부탁드립니다.</div></div>
+            <div class="action-item"><div class="action-dot"></div><div class="action-text">개원 준비하시면서 필요한 품목이나 고민 중이신 부분 있으시면 편하게 말씀 주세요.</div></div>
+        </div>
+
+        <div class="cta-section">
+            <div class="cta-emoji">📄</div>
+            <h3>개원 소모품 추천상품</h3>
+            <p>메디마켓 개원을 위한 소모품<br>추천상품 자료입니다.</p>
+            <a class="btn-cta" href="medimarket-supply-recommend.pdf" target="_blank" rel="noopener">추천상품 PDF 보기</a>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-primary" onclick="closeInfo()">돌아가기</button>
         </div>
     </div>
 </div>
@@ -1133,6 +1177,10 @@ function resetAll() {
 }
 function goHome() { resetAll(); goToStep('landing'); }
 function startFresh() { resetAll(); goToStep('step1'); }
+// 안내 페이지 — 표지/STEP5에서 진입, 돌아오면 원위치
+let infoReturnStep = 'landing';
+function openInfo(ret) { infoReturnStep = ret || 'landing'; goToStep('info'); }
+function closeInfo() { goToStep(infoReturnStep); }
 
 // ===== Landing ===== (QR/체크박스 제거 — 버튼 바로 진입)
 
