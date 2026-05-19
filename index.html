@@ -1363,25 +1363,18 @@ function renderAmountInputs() {
     wrap.innerHTML = groups.map(g => {
         const a = state.amounts[g.key] || {};
         let inner = `<div style="font-size:14px;font-weight:800;color:var(--accent);margin:18px 0 8px;">${g.label}</div>`;
-        if (g.hasPackage) {
-            inner += `<div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">패키지 선택 (택1)</div>`;
-            inner += `<div class="days-selector" id="pkg_${g.key}" style="flex-direction:column; gap:8px;">` +
-                ['basic','standard','premium'].map(p => {
-                    const act = a.mode === 'package' && a.pkg === p ? ' active' : '';
-                    return `<button class="days-option${act}" onclick="setGroupPackage('${g.key}','${p}',this)">
-                        <div class="num">${PKG_LABEL[p]} · 약 ${PACKAGES[p]}만원</div></button>`;
-                }).join('') + `</div>`;
-            inner += `<div style="display:flex;align-items:center;gap:10px;margin:14px 0 4px;color:var(--text-secondary);font-size:12px;font-weight:700;">
-                <span style="flex:1;height:1px;background:var(--border);"></span>또는<span style="flex:1;height:1px;background:var(--border);"></span></div>`;
+        if (g.key === 'consumable') {
+            inner += `<div style="font-size:13px; color:var(--text-secondary); line-height:1.6; padding:4px 0 8px;">베드 수 기준 <strong>2개월치 분량</strong>으로 전량 산출됩니다.<br>별도 금액 입력이 필요 없습니다.</div>`;
+        } else {
+            const cv = (a.mode === 'custom' && a.value) ? a.value : '';
+            inner += `<div class="input-group" style="margin-top:10px;">
+                <label>예상 금액 <span style="color:var(--text-secondary);font-weight:400;">(선택 — 입력 시 그 예산만큼 추천 확장)</span></label>
+                <div class="input-wrapper">
+                    <input type="number" id="amt_${g.key}" placeholder="예: 300" value="${cv}" oninput="setGroupAmount('${g.key}', this.value)">
+                    <span class="unit">만원</span>
+                </div>
+            </div>`;
         }
-        const cv = (a.mode === 'custom' && a.value) ? a.value : '';
-        inner += `<div class="input-group" style="margin-top:10px;">
-            <label>${g.hasPackage ? '직접 금액 입력' : '예상 금액'}</label>
-            <div class="input-wrapper">
-                <input type="number" id="amt_${g.key}" placeholder="예: 300" value="${cv}" oninput="setGroupAmount('${g.key}', this.value)">
-                <span class="unit">만원</span>
-            </div>
-        </div>`;
         return `<div style="border-bottom:1px dashed var(--border); padding-bottom:8px;">${inner}</div>`;
     }).join('');
 }
@@ -1412,9 +1405,9 @@ function setGroupAmount(key, val) {
     }
 }
 function amountText(key) {
+    if (key === 'consumable') return '베드 기준 2개월치 전량';
     const a = state.amounts[key];
     if (!a) return '추천 상품으로 전달';
-    if (a.mode === 'package') return `${PKG_LABEL[a.pkg]} (약 ${numberFormat(PACKAGES[a.pkg])}만원)`;
     if (a.mode === 'custom' && a.value) return `${numberFormat(a.value)}만원`;
     return '추천 상품으로 전달';
 }
