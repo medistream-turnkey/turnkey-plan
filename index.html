@@ -900,6 +900,18 @@
                 </div>
             </div>
             <div class="input-group">
+                <label>한의원명 / 주소 <span style="color:var(--text-secondary);font-weight:400;">(선택)</span></label>
+                <div class="input-wrapper">
+                    <input type="text" id="clinicName" placeholder="예: OO한의원 (서울 강남구 ...)" oninput="state.clinic=this.value;">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>개원 예정일 <span style="color:var(--text-secondary);font-weight:400;">(선택)</span></label>
+                <div class="input-wrapper">
+                    <input type="date" id="openDate" oninput="state.openDate=this.value;">
+                </div>
+            </div>
+            <div class="input-group">
                 <label>1인실 베드 수 <span style="color:var(--danger);">*</span></label>
                 <div class="input-wrapper">
                     <input type="number" id="bed1" value="" min="0" placeholder="예: 2" oninput="calcScale(); validateStep1();">
@@ -1199,7 +1211,9 @@ const state = {
     amounts: {},                 // (legacy, 4스텝화 후 미사용) 시트 호환 위해 유지
     selectedCats: [],            // step3: 사용자가 켠 구카테고리명 (기본 미선택)
     subRequests: {},             // step3: { 'groupKey_idx': '요청사항 텍스트' } (선택사항)
-    contact: ''                  // step4: 성함/병원명
+    contact: '',                 // step4: 성함/병원명
+    clinic: '',                  // step1: 한의원명/주소 (선택)
+    openDate: ''                 // step1: 개원 예정일 YYYY-MM-DD (선택)
 };
 
 // ===== Navigation =====
@@ -1454,6 +1468,8 @@ function buildSlackMessage() {
     const L = [];
     L.push('🏥 *턴키 개원 설문 접수*');
     if (state.contact) L.push('👤 *' + honorific(state.contact) + '*');
+    if (state.clinic) L.push('🏥 ' + state.clinic);
+    if (state.openDate) L.push('📅 개원 예정일: ' + state.openDate);
     L.push(`• 규모: 1인실 ${state.bed1} · 2인실 ${state.bed2}  →  총 ${state.totalBeds}베드 / ${state.totalRooms}룸`);
     L.push(`• 직원: ${state.staff ? state.staff + '명' : '미입력'}`);
     L.push('• 카테고리별 안내:');
@@ -1491,7 +1507,9 @@ function buildDetail() {
         cats: sel.map(g => {
             const items = groupCats(g).filter(c => state.selectedCats.includes(c));
             return items.length ? `${g.label}(${items.join('·')})` : '';
-        }).filter(Boolean).join(' / ')
+        }).filter(Boolean).join(' / '),
+        clinic: state.clinic || '',
+        openDate: state.openDate || ''
     };
 }
 async function postRelay(payload) {
