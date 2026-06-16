@@ -4,3 +4,21 @@ _*.html
 node_modules
 package.json
 package-lock.json
+
+# 내부 운영 문서 (공개 제외)
+보고_설문주문서.md
+
+# --- secret/credential 방어 (defense-in-depth, 2026-06-16 추가) ---
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+*token*.json
+config.local.*
+*.log
+dist/
+build/
